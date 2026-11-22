@@ -3,37 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#14171f">
+<meta name="theme-color" content="#F4F1EA">
 <title>Lot Size Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#14171f;--card:#1d212c;--line:#2c3240;--txt:#e8eaf0;--mut:#8b93a7;--acc:#f5c542;--buy:#14a37f;--sell:#e0475b;--warn:#ff9f43}
+  :root{
+    --ink:#0E0F0C;
+    --acc:#C6F432;
+    --bg:#F4F1EA;
+    --mut:#55574F;
+    --card:#FFFFFF;
+    --line:#DCD7CB;
+    --txt:#0E0F0C;
+    --field:#F4F1EA;
+    --buy:#1B7A58;
+    --sell:#C43348;
+    --warn:#A15C12;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;padding:14px env(safe-area-inset-right) 40px env(safe-area-inset-left)}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 Inter,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:14px env(safe-area-inset-right) 40px env(safe-area-inset-left)}
   .wrap{max-width:520px;margin:0 auto}
-  h1{font-size:18px;margin:4px 0 12px;color:var(--acc);letter-spacing:.3px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
-  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin:0 0 8px}
+  h1{font-family:"Bricolage Grotesque",Inter,"Segoe UI",sans-serif;font-size:22px;font-weight:700;margin:8px 0 16px;color:var(--ink);letter-spacing:-.02em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .card h2{font-family:"Bricolage Grotesque",Inter,"Segoe UI",sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin:0 0 8px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .full{grid-column:1/-1}
   label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
-  input,select{width:100%;background:#0f1218;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px}
-  input:focus,select:focus{outline:none;border-color:var(--acc)}
+  input,select{width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px;font-family:inherit}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
   .row{display:flex;gap:8px;align-items:end}
   .row>div{flex:1}
-  button{background:#2b3142;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:nowrap}
-  button.on{color:var(--acc);border-color:var(--acc)}
+  button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:nowrap;font-family:inherit;cursor:pointer}
+  button.on{background:var(--acc);color:var(--ink);border-color:var(--acc);font-weight:600}
   .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-  .seg button{flex:1;border:0;border-radius:0;background:#0f1218;color:var(--mut)}
-  .seg button.on{background:#2b3142;color:var(--txt)}
-  .big{font-size:40px;font-weight:700;text-align:center;margin:4px 0 0}
-  .side{text-align:center;font-weight:700;letter-spacing:1px}
+  .seg button{flex:1;border:0;border-radius:0;background:var(--field);color:var(--mut)}
+  .seg button.on{background:var(--acc);color:var(--ink)}
+  .big{font-family:"Bricolage Grotesque",Inter,"Segoe UI",sans-serif;font-size:40px;font-weight:700;text-align:center;margin:10px 0 0;background:var(--acc);color:var(--ink);border-radius:12px;padding:10px 12px;letter-spacing:-.03em}
+  .side{font-family:"Bricolage Grotesque",Inter,"Segoe UI",sans-serif;text-align:center;font-weight:700;letter-spacing:.4px;color:var(--ink)}
   .buy{color:var(--buy)} .sell{color:var(--sell)}
   .kv{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:14px;margin-top:10px}
   .kv span:nth-child(odd){color:var(--mut)}
   .kv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
   .msg{border-radius:8px;padding:9px 10px;margin-top:10px;font-size:13px}
-  .err{background:rgba(224,71,91,.15);color:#ff8a98}
-  .wrn{background:rgba(255,159,67,.13);color:var(--warn)}
+  .err{background:#F8E4E6;color:#8A2433}
+  .wrn{background:#F6E8D4;color:var(--warn)}
   .hint{font-size:12px;color:var(--mut);margin-top:4px}
   details summary{cursor:pointer;color:var(--mut);font-size:13px}
 </style>
