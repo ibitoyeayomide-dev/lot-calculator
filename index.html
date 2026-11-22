@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14171f">
+<title>Lot Size Calculator</title>
+<style>
+  :root{--bg:#14171f;--card:#1d212c;--line:#2c3240;--txt:#e8eaf0;--mut:#8b93a7;--acc:#f5c542;--buy:#14a37f;--sell:#e0475b;--warn:#ff9f43}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;padding:14px env(safe-area-inset-right) 40px env(safe-area-inset-left)}
+  .wrap{max-width:520px;margin:0 auto}
+  h1{font-size:18px;margin:4px 0 12px;color:var(--acc);letter-spacing:.3px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin:0 0 8px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .full{grid-column:1/-1}
+  label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+  input,select{width:100%;background:#0f1218;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px}
+  input:focus,select:focus{outline:none;border-color:var(--acc)}
+  .row{display:flex;gap:8px;align-items:end}
+  .row>div{flex:1}
+  button{background:#2b3142;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:nowrap}
+  button.on{color:var(--acc);border-color:var(--acc)}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{flex:1;border:0;border-radius:0;background:#0f1218;color:var(--mut)}
+  .seg button.on{background:#2b3142;color:var(--txt)}
+  .big{font-size:40px;font-weight:700;text-align:center;margin:4px 0 0}
+  .side{text-align:center;font-weight:700;letter-spacing:1px}
+  .buy{color:var(--buy)} .sell{color:var(--sell)}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:14px;margin-top:10px}
+  .kv span:nth-child(odd){color:var(--mut)}
+  .kv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+  .msg{border-radius:8px;padding:9px 10px;margin-top:10px;font-size:13px}
+  .err{background:rgba(224,71,91,.15);color:#ff8a98}
+  .wrn{background:rgba(255,159,67,.13);color:var(--warn)}
+  .hint{font-size:12px;color:var(--mut);margin-top:4px}
+  details summary{cursor:pointer;color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lot Size Calculator</h1>
+
+  <div class="card">
+    <h2>Account</h2>
+    <div class="grid">
+      <div><label>Account currency</label>
+        <select id="acct">
+          <option>USD</option><option>NGN</option><option>EUR</option><option>GBP</option><option>ZAR</option><option>KES</option><option>GHS</option>
+        </select></div>
+      <div><label>Balance / equity</label><input id="bal" type="number" inputmode="decimal" step="any" value="1000"></div>
+      <div><label>Risk %</label><input id="risk" type="number" inputmode="decimal" step="any" value="1"></div>
+      <div><label>Risk amount</label><input id="riskAmt" type="text" readonly></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Trade</h2>
+    <div class="grid">
+      <div class="full"><label>Symbol</label><select id="sym"></select></div>
+      <div><label>Entry price</label><input id="entry" type="number" inputmode="decimal" step="any" placeholder="e.g. 2650.00"></div>
+      <div><label>Stop loss price</label><input id="sl" type="number" inputmode="decimal" step="any" placeholder="e.g. 2645.00"></div>
+      <div class="full"><label>Take profit</label>
+        <div class="seg" id="tpSeg"><button data-v="rr" class="on">R:R</button><button data-v="price">Price</button><button data-v="none">None</button></div></div>
+      <div id="tpRRBox"><label>R multiple</label><input id="rr" type="number" inputmode="decimal" step="any" value="2"></div>
+      <div id="tpPxBox" style="display:none"><label>TP price</label><input id="tp" type="number" inputmode="decimal" step="any"></div>
+      <div><label>Current price (optional)</label><input id="cur" type="number" inputmode="decimal" step="any" placeholder="for Limit / Stop"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="side" id="side">Enter entry and SL</div>
+    <div class="big" id="lots">–</div>
+    <div style="text-align:center;color:var(--mut);font-size:13px">lots</div>
+    <div class="kv" id="kv"></div>
+    <div id="msgs"></div>
+  </div>
+
+  <div class="card">
+    <h2>Symbol &amp; currency settings</h2>
+    <div class="grid">
+      <div><label>Contract size (1 lot)</label><input id="contract" type="number" inputmode="decimal" step="any"></div>
+      <div><label>Point size</label><input id="point" type="number" inputmode="decimal" step="any"></div>
+      <div><label>Quote currency</label><input id="quote" type="text"></div>
+      <div><label>Commission / lot (acct ccy)</label><input id="comm" type="number" inputmode="decimal" step="any" value="0"></div>
+      <div><label>Min lot</label><input id="minLot" type="number" inputmode="decimal" step="any" value="0.01"></div>
+      <div><label>Lot step</label><input id="step" type="number" inputmode="decimal" step="any" value="0.01"></div>
+      <div class="full"><label id="rateLbl">1 USD = ? USD</label>
+        <div class="row"><div><input id="rate" type="number" inputmode="decimal" step="any"></div><button id="rateOverride" type="button">Use my rate</button></div>
+        <div class="hint" id="rateHint"></div></div>
+    </div>
+    <details style="margin-top:10px"><summary>Check these against your broker</summary>
+      <p class="hint">In MT5: long-press the symbol in Quotes, tap <b>Specification</b>. Use its <b>Contract size</b>, <b>Digits</b> (point = 1 / 10^digits), <b>Minimal volume</b> and <b>Volume step</b>. Index CFDs like NAS100 differ a lot between brokers (1, 10 or 20 per lot), so always check. On an NGN account, the page fills a live market rate automatically. If your prop firm uses a fixed rate (for example 1400 naira per dollar), tap Use my rate and type that rate in. A live market rate can differ from your broker's rate.</p>
+    </details>
+  </div>
+</div>
+
+<script>
+// MATH-START  (pure functions, tested in test.js)
+function decimalsOf(x){ const s=String(x); if(s.includes('e-')) return parseInt(s.split('e-')[1],10); const i=s.indexOf('.'); return i<0?0:s.length-i-1; }
+function floorToStep(v, step){ if(!(step>0)) step=0.01; const d=decimalsOf(step); const n=Math.floor(v/step+1e-9); return +(n*step).toFixed(d); }
+
+/** p: {balance, riskPct, entry, sl, tpMode:'rr'|'price'|'none', rr, tp, contract, point, rate, commission, minLot, step, current}
+ *  rate = account-currency value of 1 unit of the quote currency */
+function calcLots(p){
+  const out={ok:false, errors:[], warnings:[]};
+  const need=(v,name)=>{ if(!(v>0)) out.errors.push(name+' is required'); };
+  need(p.balance,'Balance'); need(p.riskPct,'Risk %'); need(p.entry,'Entry price'); need(p.sl,'Stop loss price');
+  need(p.contract,'Contract size'); need(p.point,'Point size'); need(p.rate,'Conversion rate');
+  if(out.errors.length) return out;
+  if(p.entry===p.sl){ out.errors.push('SL cannot equal entry'); return out; }
+
+  out.isBuy = p.sl < p.entry;
+  out.dist = Math.abs(p.entry - p.sl);                       // price distance
+  out.points = Math.round(out.dist / p.point);               // in points
+  out.riskMoney = p.balance * p.riskPct / 100;
+  out.lossPerLot = out.dist * p.contract * p.rate + (p.commission>0?p.commission:0);
+  out.rawLots = out.riskMoney / out.lossPerLot;
+  out.lots = floorToStep(out.rawLots, p.step);
+
+  // take profit
+  const dir = out.isBuy?1:-1;
+  if(p.tpMode==='rr' && p.rr>0){ out.tp = p.entry + dir*out.dist*p.rr; }
+  else if(p.tpMode==='price' && p.tp>0){
+    if((out.isBuy && p.tp<=p.entry) || (!out.isBuy && p.tp>=p.entry)) out.errors.push(out.isBuy?'BUY: TP must be above entry':'SELL: TP must be below entry');
+    else out.tp = p.tp;
+  }
+  if(out.tp){ out.tpDist=Math.abs(out.tp-p.entry); out.tpPoints=Math.round(out.tpDist/p.point); out.rr=out.tpDist/out.dist; }
+
+  // order type vs current price
+  if(p.current>0){
+    if(Math.abs(p.current-p.entry) < p.point/2) out.orderType = out.isBuy?'BUY (market)':'SELL (market)';
+    else if(out.isBuy) out.orderType = p.entry < p.current ? 'BUY LIMIT' : 'BUY STOP';
+    else out.orderType = p.entry > p.current ? 'SELL LIMIT' : 'SELL STOP';
+  }
+
+  const minLot = p.minLot>0?p.minLot:0.01;
+  out.minLotRisk = minLot * out.lossPerLot;
+  if(out.lots < minLot){
+    out.errors.push(`Risk too small for this SL: the minimum ${minLot} lot would risk ${fmt(out.minLotRisk)} (${fmt(out.minLotRisk/p.balance*100)}%). Use a tighter SL or a bigger risk %.`);
+    out.lots = 0;
+  }
+  out.riskActual = out.lots * out.lossPerLot;
+  out.riskActualPct = out.riskActual / p.balance * 100;
+  if(out.tp) out.reward = out.lots * (out.tpDist * p.contract * p.rate) - out.lots*(p.commission>0?p.commission:0);
+  if(p.riskPct > 3) out.warnings.push('Risk above 3% per trade.');
+  out.ok = out.errors.length===0;
+  return out;
+}
+function fmt(n, d=2){ if(n===undefined||n===null||!isFinite(n)) return '–'; return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+/** usdRates: map of currency code -> units of that currency per 1 USD.
+ *  Returns how many account-currency units equal 1 unit of the quote currency, or null. */
+function quoteToAccountRate(usdRates, quote, account){
+  const q=String(quote||'').toUpperCase().trim();
+  const a=String(account||'').toUpperCase().trim();
+  if(!q||!a||!usdRates) return null;
+  if(q===a) return 1;
+  const qPerUsd = q==='USD' ? 1 : usdRates[q];
+  const aPerUsd = a==='USD' ? 1 : usdRates[a];
+  if(!(qPerUsd>0) || !(aPerUsd>0)) return null;
+  return aPerUsd / qPerUsd;
+}
+// MATH-END
+
+const PRESETS = {
+  'XAUUSD (Gold)':      {contract:100,    point:0.01,    base:'XAU', quote:'USD'},
+  'XAGUSD (Silver)':    {contract:5000,   point:0.001,   base:'XAG', quote:'USD'},
+  'NAS100 / US100':     {contract:1,      point:0.01,    base:'',    quote:'USD'},
+  'US30':               {contract:1,      point:0.01,    base:'',    quote:'USD'},
+  'SPX500 / US500':     {contract:1,      point:0.01,    base:'',    quote:'USD'},
+  'BTCUSD':             {contract:1,      point:0.01,    base:'BTC', quote:'USD'},
+  'EURUSD':             {contract:100000, point:0.00001, base:'EUR', quote:'USD'},
+  'GBPUSD':             {contract:100000, point:0.00001, base:'GBP', quote:'USD'},
+  'AUDUSD':             {contract:100000, point:0.00001, base:'AUD', quote:'USD'},
+  'NZDUSD':             {contract:100000, point:0.00001, base:'NZD', quote:'USD'},
+  'USDJPY':             {contract:100000, point:0.001,   base:'USD', quote:'JPY'},
+  'GBPJPY':             {contract:100000, point:0.001,   base:'GBP', quote:'JPY'},
+  'EURJPY':             {contract:100000, point:0.001,   base:'EUR', quote:'JPY'},
+  'USDCAD':             {contract:100000, point:0.00001, base:'USD', quote:'CAD'},
+  'USDCHF':             {contract:100000, point:0.00001, base:'USD', quote:'CHF'},
+  'EURGBP':             {contract:100000, point:0.00001, base:'EUR', quote:'GBP'},
+  'Custom':             {contract:1,      point:0.01,    base:'',    quote:'USD'}
+};
+const $ = id => document.getElementById(id);
+const num = id => parseFloat(String($(id).value).replace(',','.'));
+let tpMode='rr', rateOverride=false;
+let ratesCache=null, ratesFetchedAt=null, fetchInFlight=null;
+const PRIMARY_RATE_API='https://open.er-api.com/v6/latest/USD';
+const FALLBACK_RATE_API='https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json';
+
+function loadState(){ try{ return JSON.parse(localStorage.getItem('lotcalc')||'{}'); }catch(e){ return {}; } }
+function saveState(){
+  const s={}; ['acct','bal','risk','sym','rr','contract','point','quote','comm','minLot','step','rate'].forEach(k=>s[k]=$(k).value);
+  s.tpMode=tpMode; s.rateOverride=rateOverride;
+  const saved=loadState();
+  s.lastLiveRate = saved.lastLiveRate; s.lastLivePair = saved.lastLivePair;
+  localStorage.setItem('lotcalc',JSON.stringify(s));
+}
+function saveLastLive(pair, rate){
+  const s=loadState();
+  s.lastLivePair=pair; s.lastLiveRate=rate;
+  localStorage.setItem('lotcalc',JSON.stringify(s));
+}
+function pairKey(quote, acct){ return String(quote||'').toUpperCase().trim()+'>'+String(acct||'').toUpperCase().trim(); }
+function applyPreset(name){
+  const p=PRESETS[name]; if(!p) return;
+  $('contract').value=p.contract; $('point').value=p.point; $('quote').value=p.quote;
+}
+function formatLagosTime(d){
+  const date = d instanceof Date ? d : new Date(d);
+  const use = isNaN(+date) ? new Date() : date;
+  return use.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Africa/Lagos'});
+}
+function updateOverrideBtn(){
+  const b=$('rateOverride');
+  if(!b) return;
+  b.classList.toggle('on', rateOverride);
+  b.textContent = rateOverride ? 'Using my rate' : 'Use my rate';
+}
+function canDeriveFromEntry(){
+  const p=PRESETS[$('sym').value]||{};
+  const e=num('entry');
+  return !!(p.base && p.base===$('acct').value && e>0);
+}
+/** Returns 'same', 'derived', or 'need'. Does not fetch. */
+function updateRateLabel(){
+  const acct=$('acct').value, quote=($('quote').value||'').toUpperCase().trim();
+  $('rateLbl').textContent=`1 ${quote||'?'} = ? ${acct}`;
+  if(quote===acct){
+    $('rate').value=1; $('rate').readOnly=true;
+    $('rateHint').textContent='Same currency, no conversion.';
+    return 'same';
+  }
+  $('rate').readOnly=false;
+  if(canDeriveFromEntry() && !rateOverride){
+    const e=num('entry');
+    $('rate').value=+(1/e).toPrecision(8);
+    $('rateHint').textContent=`Worked out from the entry price (1 / ${e}).`;
+    return 'derived';
+  }
+  if(rateOverride){
+    $('rateHint').textContent="Using your own rate. Tap the button again to fetch a live market rate.";
+    return 'override';
+  }
+  return 'need';
+}
+function normalizeUsdRates(src, rates){
+  const out={USD:1};
+  Object.keys(rates||{}).forEach(k=>{
+    const v=rates[k];
+    if(typeof v==='number' && v>0) out[k.toUpperCase()]=v;
+  });
+  if(!(out.USD>0)) out.USD=1;
+  return out;
+}
+async function fetchUsdRatesFromNetwork(){
+  try{
+    const r=await fetch(PRIMARY_RATE_API); const j=await r.json();
+    if(!(j && j.rates && typeof j.rates==='object')) throw new Error('bad primary');
+    const rates=normalizeUsdRates('er', j.rates);
+    if(!(rates.NGN>0)) throw new Error('bad primary');
+    return {rates, fetchedAt:new Date()};
+  }catch(e){
+    const r=await fetch(FALLBACK_RATE_API); const j=await r.json();
+    const raw=j && (j.usd || j.USD);
+    if(!raw || typeof raw!=='object') throw new Error('bad fallback');
+    const rates=normalizeUsdRates('fawaz', raw);
+    if(!(rates.NGN>0)) throw new Error('bad fallback');
+    return {rates, fetchedAt:new Date()};
+  }
+}
+function getUsdRates(force){
+  if(!force && ratesCache) return Promise.resolve({rates:ratesCache, fetchedAt:ratesFetchedAt});
+  if(!force && fetchInFlight) return fetchInFlight;
+  fetchInFlight=(async()=>{
+    const data=await fetchUsdRatesFromNetwork();
+    ratesCache=data.rates; ratesFetchedAt=data.fetchedAt;
+    return data;
+  })();
+  return fetchInFlight.finally(()=>{ fetchInFlight=null; });
+}
+function applyLiveRate(value, when, quote, acct){
+  const v=+Number(value).toPrecision(8);
+  $('rate').value=v;
+  $('rateHint').textContent='Live rate, updated '+formatLagosTime(when);
+  saveLastLive(pairKey(quote,acct), v);
+}
+function applySavedRateFallback(){
+  const quote=($('quote').value||'').toUpperCase().trim();
+  const acct=$('acct').value;
+  const s=loadState();
+  const key=pairKey(quote,acct);
+  if(s.lastLivePair===key && parseFloat(s.lastLiveRate)>0){
+    $('rate').value=s.lastLiveRate;
+    $('rateHint').textContent='Could not fetch a live rate. Using the last saved rate.';
+    return;
+  }
+  if(num('rate')>0){
+    $('rateHint').textContent='Could not fetch a live rate. Using the last saved rate.';
+    return;
+  }
+  $('rateHint').textContent="Could not fetch a live rate. Type your broker's rate.";
+}
+async function ensureLiveRate(){
+  const status=updateRateLabel();
+  if(status!=='need') return;
+  const quote=($('quote').value||'').toUpperCase().trim();
+  const acct=$('acct').value;
+  if(!quote||!acct) return;
+  if(ratesCache){
+    const cached=quoteToAccountRate(ratesCache, quote, acct);
+    if(cached){ applyLiveRate(cached, ratesFetchedAt, quote, acct); run(); return; }
+  }
+  $('rateHint').textContent='Fetching live rate...';
+  try{
+    const data=await getUsdRates(false);
+    // If the user toggled override while we were fetching, do not overwrite.
+    if(rateOverride) return;
+    const statusNow=updateRateLabel();
+    if(statusNow!=='need') return;
+    const v=quoteToAccountRate(data.rates, quote, acct);
+    if(!v) throw new Error('no rate');
+    applyLiveRate(v, data.fetchedAt, quote, acct);
+    run();
+  }catch(e){
+    applySavedRateFallback();
+    run();
+  }
+}
+function run(){
+  updateRateLabel();
+  const r=calcLots({
+    balance:num('bal'), riskPct:num('risk'), entry:num('entry'), sl:num('sl'),
+    tpMode, rr:num('rr'), tp:num('tp'), contract:num('contract'), point:num('point'),
+    rate:num('rate'), commission:num('comm'), minLot:num('minLot'), step:num('step'), current:num('cur')
+  });
+  const acct=$('acct').value, pd=decimalsOf(num('point')||0.01);
+  const bal=num('bal'), rp=num('risk');
+  $('riskAmt').value = (bal>0&&rp>0) ? fmt(bal*rp/100)+' '+acct : '';
+  const side=$('side');
+  if(r.dist){ side.textContent = (r.orderType || (r.isBuy?'BUY':'SELL')) + (r.orderType?'':' (SL '+(r.isBuy?'below':'above')+' entry)'); side.className='side '+(r.isBuy?'buy':'sell'); }
+  else { side.textContent='Enter entry and SL'; side.className='side'; }
+  $('lots').textContent = r.ok ? fmt(r.lots, decimalsOf(num('step')||0.01)) : '–';
+  const kv=[];
+  if(r.dist){
+    kv.push(['SL distance', `${fmt(r.dist,pd)}  (${r.points.toLocaleString()} pts)`]);
+    kv.push(['Risk target', `${fmt(r.riskMoney)} ${acct}`]);
+    if(r.ok) kv.push(['Risk at these lots', `${fmt(r.riskActual)} ${acct}  (${fmt(r.riskActualPct)}%)`]);
+    kv.push(['Loss per 1.00 lot', `${fmt(r.lossPerLot)} ${acct}`]);
+    kv.push(['Exact lots (before rounding)', fmt(r.rawLots,4)]);
+    if(r.tp){ kv.push(['TP price', fmt(r.tp,pd)]); kv.push(['TP distance', `${fmt(r.tpDist,pd)}  (${r.tpPoints.toLocaleString()} pts)`]); kv.push(['R:R', '1 : '+fmt(r.rr)]); if(r.ok) kv.push(['Reward', `${fmt(r.reward)} ${acct}`]); }
+  }
+  $('kv').innerHTML = kv.map(([k,v])=>`<span>${k}</span><span>${v}</span>`).join('');
+  $('msgs').innerHTML = r.errors.map(e=>`<div class="msg err">${e}</div>`).join('') + r.warnings.map(w=>`<div class="msg wrn">${w}</div>`).join('');
+  saveState();
+}
+function init(){
+  const sel=$('sym'); Object.keys(PRESETS).forEach(k=>{ const o=document.createElement('option'); o.textContent=k; sel.appendChild(o); });
+  const s=loadState();
+  if(s.sym && PRESETS[s.sym]) sel.value=s.sym; applyPreset(sel.value);
+  ['acct','bal','risk','rr','contract','point','quote','comm','minLot','step','rate'].forEach(k=>{ if(s[k]!==undefined && s[k]!=='') $(k).value=s[k]; });
+  if(s.tpMode) setTp(s.tpMode);
+  rateOverride=!!(s.rateOverride || s.rateManual);
+  updateOverrideBtn();
+  sel.addEventListener('change',()=>{
+    const oldQuote=($('quote').value||'').toUpperCase().trim();
+    applyPreset(sel.value);
+    $('entry').value=''; $('sl').value=''; $('tp').value=''; $('cur').value='';
+    const newQuote=($('quote').value||'').toUpperCase().trim();
+    if(newQuote!==oldQuote){ rateOverride=false; updateOverrideBtn(); }
+    run(); ensureLiveRate();
+  });
+  $('acct').addEventListener('change',()=>{ rateOverride=false; updateOverrideBtn(); if($('quote').value!==$('acct').value && !num('rate')) $('rate').value=''; run(); ensureLiveRate(); });
+  $('quote').addEventListener('change',()=>{ rateOverride=false; updateOverrideBtn(); run(); ensureLiveRate(); });
+  $('rate').addEventListener('input',()=>{
+    const quote=($('quote').value||'').toUpperCase().trim();
+    if(quote!==$('acct').value){ rateOverride=true; updateOverrideBtn(); }
+    run();
+  });
+  document.querySelectorAll('input:not(#rate)').forEach(i=>i.addEventListener('input',run));
+  $('tpSeg').addEventListener('click',e=>{ const v=e.target.dataset&&e.target.dataset.v; if(v){ setTp(v); run(); } });
+  $('rateOverride').addEventListener('click',()=>{
+    rateOverride=!rateOverride;
+    updateOverrideBtn();
+    if(rateOverride){ updateRateLabel(); saveState(); }
+    else { run(); ensureLiveRate(); }
+  });
+  run();
+  ensureLiveRate();
+}
+function setTp(v){ tpMode=v; document.querySelectorAll('#tpSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); $('tpRRBox').style.display=v==='rr'?'':'none'; $('tpPxBox').style.display=v==='price'?'':'none'; }
+init();
+</script>
+</body>
+</html>
